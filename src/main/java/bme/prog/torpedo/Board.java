@@ -44,4 +44,13 @@ public class Board {
 
         ships.add(newShip);
     }
+    //If there's even a single ship unsunk, it returns false
+    public boolean areAllShipsSunk() {
+        for (Ship ship : ships) {
+            if (!ship.isSunken()) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
