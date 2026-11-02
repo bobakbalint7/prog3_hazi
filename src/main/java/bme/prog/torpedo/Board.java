@@ -53,4 +53,8 @@ public class Board {
         }
         return true;
     }
+    
+    public boolean hasBeenShot(Coordinate c) {
+        return firedShots.contains(c);
+    }
 }
