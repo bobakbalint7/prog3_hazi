@@ -26,5 +26,22 @@ public class Board {
         return false;
     }
 
-    
+    public void placeShip(Ship newShip){
+        //Check if it's within boundaries
+        for(Coordinate c: newShip.getCoordinates()){
+            if(c.getRow()<0 || c.getRow()>9 || c.getCol()<0 ||c.getCol()>9){
+                throw new IllegalArgumentException("You placed the ship outside of boundaries!");
+            }
+        }
+        //Check if it was placed on another ship
+        for(Ship ship : ships){
+            for(Coordinate c: newShip.getCoordinates()){
+                if(ship.getCoordinates().contains(c)){
+                    throw new IllegalArgumentException("You placed the new ship on top of an already placed one!");
+                }
+            }
+        }
+
+        ships.add(newShip);
+    }
 }
