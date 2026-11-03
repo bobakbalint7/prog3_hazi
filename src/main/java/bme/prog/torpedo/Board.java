@@ -96,4 +96,19 @@ public class Board {
     public boolean hasBeenShot(Coordinate c) {
         return firedShots.contains(c);
     }
+
+    /**
+     * Megvizsgálja, hogy az adott koordinátán lévő hajó elsüllyedt-e.
+     * @param c A vizsgálandó koordináta.
+     * @return true, ha van ott hajó és az elsüllyedt.
+     */
+    public boolean isShipSunkAt(Coordinate c) {
+        for (Ship ship : ships) {
+            // Ha ez a hajó tartalmazza a koordinátát, megkérdezzük, hogy elsüllyedt-e
+            if (ship.getCoordinates().contains(c)) {
+                return ship.isSunken();
+            }
+        }
+        return false;
+    }
 }
