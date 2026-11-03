@@ -1,18 +1,37 @@
 package bme.prog.torpedo;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * A játéktáblát reprezentáló osztály. 
+ * Felelős a hajók tárolásáért, valamint a beérkező lövések kiértékeléséért.
+ */
 public class Board {
+    
+    /** A már leadott lövések koordinátáinak halmaza a duplikációk elkerülésére. */
     private final Set<Coordinate> firedShots;
+    
+    /** A táblán szabályosan elhelyezett hajók listája. */
     private final List<Ship> ships;
+
+    /**
+     * Létrehoz egy új, üres játéktáblát.
+     * Inicializálja a hajók listáját és a leadott lövések halmazát.
+     */
     public Board() {
         this.ships = new ArrayList<>();
         this.firedShots = new HashSet<>();
     }
 
+    /**
+     * Feldolgoz egy beérkező lövést a játéktáblán.
+     * Ellenőrzi, hogy lőttek-e már ide, majd továbbadja a lövést a hajóknak.
+     * 
+     * @param c A lövés célkoordinátája.
+     * @return true, ha a lövés eltalált egy hajót, egyébként false.
+     */
     public boolean hit(Coordinate c){
         if(firedShots.contains(c)) return false;
         firedShots.add(c);
@@ -26,14 +45,23 @@ public class Board {
         return false;
     }
 
+    /**
+     * Elhelyez egy új hajót a játéktáblán.
+     * Ellenőrzi, hogy a hajó a 10x10-es pályán belül van-e, 
+     * és hogy nem ütközik-e egy már lent lévő hajóval.
+     * 
+     * @param newShip Az elhelyezni kívánt hajó.
+     * @throws IllegalArgumentException Ha a hajó kilóg a pályáról, vagy másik hajóra kerülne.
+     */
     public void placeShip(Ship newShip){
-        //Check if it's within boundaries
+        
         for(Coordinate c: newShip.getCoordinates()){
             if(c.getRow()<0 || c.getRow()>9 || c.getCol()<0 ||c.getCol()>9){
                 throw new IllegalArgumentException("You placed the ship outside of boundaries!");
             }
         }
-        //Check if it was placed on another ship
+        
+        
         for(Ship ship : ships){
             for(Coordinate c: newShip.getCoordinates()){
                 if(ship.getCoordinates().contains(c)){
@@ -44,7 +72,12 @@ public class Board {
 
         ships.add(newShip);
     }
-    //If there's even a single ship unsunk, it returns false
+
+    /**
+     * Ellenőrzi, hogy a táblán lévő összes hajó elsüllyedt-e már.
+     * 
+     * @return true, ha minden hajó elsüllyedt (tehát vége a játéknak), egyébként false.
+     */
     public boolean areAllShipsSunk() {
         for (Ship ship : ships) {
             if (!ship.isSunken()) {
@@ -54,6 +87,12 @@ public class Board {
         return true;
     }
     
+    /**
+     * Lekérdezi, hogy egy adott koordinátára adtak-e már le lövést.
+     * 
+     * @param c A vizsgálandó koordináta.
+     * @return true, ha a mezőt már lőtték, egyébként false.
+     */
     public boolean hasBeenShot(Coordinate c) {
         return firedShots.contains(c);
     }
