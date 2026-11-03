@@ -57,15 +57,25 @@ public class Board {
         
         for(Coordinate c: newShip.getCoordinates()){
             if(c.getRow()<0 || c.getRow()>9 || c.getCol()<0 ||c.getCol()>9){
-                throw new IllegalArgumentException("You placed the ship outside of boundaries!");
+                throw new IllegalArgumentException("A határokon kívülre helyeztél el hajót!");
             }
         }
         
         
-        for(Ship ship : ships){
-            for(Coordinate c: newShip.getCoordinates()){
-                if(ship.getCoordinates().contains(c)){
-                    throw new IllegalArgumentException("You placed the new ship on top of an already placed one!");
+        // Ellenőrizzük, hogy nem ütközik-e, vagy nem ér-e hozzá egy már lent lévő hajóhoz
+        for (Ship existingShip : ships) {
+            for (Coordinate newCoord : newShip.getCoordinates()) {
+                for (Coordinate existingCoord : existingShip.getCoordinates()) {
+                    
+                    // Kiszámoljuk a sorok és az oszlopok távolságát
+                    int rowDiff = Math.abs(newCoord.getRow() - existingCoord.getRow());
+                    int colDiff = Math.abs(newCoord.getCol() - existingCoord.getCol());
+                    
+                    // Ha mindkét távolság legfeljebb 1, akkor a két koordináta vagy fedi egymást, vagy szomszédos
+                    if (rowDiff <= 1 && colDiff <= 1) {
+                        throw new IllegalArgumentException("A hajók nem érhetnek egymáshoz, és egymáson sem lehetnek!");
+                    }
+                    
                 }
             }
         }
