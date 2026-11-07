@@ -1,4 +1,4 @@
-# Specifikáció
+### Specifikáció
 
 1. A feladat ismertetése
 A program a torpedó nevű játékot valósítja meg, ami az alábbiak szerint működik:

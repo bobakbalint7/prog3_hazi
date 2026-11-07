@@ -1,7 +1,6 @@
 package bme.prog.torpedo;
 import javax.swing.*;
-import java.awt.*;
-
+import java.awt.*;  
 
 public class Main {
     public static void main(String[] args) {
@@ -10,5 +9,6 @@ public class Main {
             GameWindow window = new GameWindow(game);
             window.setVisible(true);
         });
+        
     }
 }

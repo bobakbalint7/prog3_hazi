@@ -89,6 +89,10 @@ public class Board {
      * @return true, ha minden hajó elsüllyedt (tehát vége a játéknak), egyébként false.
      */
     public boolean areAllShipsSunk() {
+        //ha még nincs hajó a táblán, nem lehet vége. Ez csak az első kipróbálásnál volt hiba.
+        if (ships.isEmpty()) {
+            return false; 
+        }
         for (Ship ship : ships) {
             if (!ship.isSunken()) {
                 return false;
@@ -117,6 +121,19 @@ public class Board {
             // Ha ez a hajó tartalmazza a koordinátát, megkérdezzük, hogy elsüllyedt-e
             if (ship.getCoordinates().contains(c)) {
                 return ship.isSunken();
+            }
+        }
+        return false;
+    }
+    /**
+     * Lekérdezi, hogy a megadott koordinátán van-e hajó.
+     * @param c A vizsgálandó koordináta.
+     * @return true, ha van ott hajó (akár ép, akár sérült), egyébként false.
+     */
+    public boolean hasShipAt(Coordinate c) {
+        for (Ship ship : ships) {
+            if (ship.getCoordinates().contains(c)) {
+                return true;
             }
         }
         return false;

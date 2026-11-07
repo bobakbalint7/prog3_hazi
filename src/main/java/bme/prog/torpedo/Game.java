@@ -12,7 +12,7 @@ public class Game {
     private final Board enemyBoard;
     private boolean isPlayerTurn;
 
-    // --- Bot memóriaváltozók ---
+    //Bot memória
     private final Random random;
     /** Igaz, ha a gép épp egy megsebzett hajót próbál elsüllyeszteni (vadászik). */
     private boolean isHunting;
@@ -98,7 +98,7 @@ public class Game {
      * A Bot  intelligens lövési logikája.
      * Ha találatot ér el, célirányosan követi a hajót, amíg az el nem süllyed.
      */
-    public void playBotTurn() {
+    public Coordinate playBotTurn() {
         Coordinate target = null;
 
         // 1. FÁZIS: Vadászat (ha korábban megsebeztünk egy hajót)
@@ -171,8 +171,11 @@ public class Game {
                 
             }
         }
+        return target;
     }
-
+    public boolean hasPlayerShipAt(Coordinate c) {
+        return playerBoard.hasShipAt(c);
+    }
     /**
      * Belső segédmetódus annak ellenőrzésére, hogy a koordináta a 10x10-es pályán belül van-e.
      */
