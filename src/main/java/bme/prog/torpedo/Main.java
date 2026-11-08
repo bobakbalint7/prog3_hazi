@@ -1,14 +1,13 @@
 package bme.prog.torpedo;
-import javax.swing.*;
-import java.awt.*;  
+import javax.swing.SwingUtilities;
+
 
 public class Main {
     public static void main(String[] args) {
-       SwingUtilities.invokeLater(() -> {
-            Game game = new Game();
-            GameWindow window = new GameWindow(game);
-            window.setVisible(true);
+        SwingUtilities.invokeLater(() -> {
+
+            // Most már a Főmenüvel indítunk, nem egyből a játékkal
+            new MainMenu().setVisible(true);
         });
-        
     }
 }

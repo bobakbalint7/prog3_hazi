@@ -24,7 +24,14 @@ public class Game {
     private int huntDirection;
     /** Számon tartja, hány irányt próbált már ki a gép a 4-ből. */
     private int directionsTried;
+    //Találatkor az egész hajó kilövése
+    private int specialShot1Count;
+    //Lőtt cella környezetében 1 hajó cella kilövése
+    private int specialShot2Count;
 
+    // ... konstruktor ...
+
+    
     /**
      * Létrehoz egy új játékot, inicializálja a táblákat és a gép memóriáját.
      */
@@ -39,6 +46,15 @@ public class Game {
         this.lastHit = null;
         this.huntDirection = 0;
         this.directionsTried = 0;
+        this.specialShot1Count=0;
+        this.specialShot2Count=0;
+    }
+    public void setSpecialShot1Count(int count) {
+        this.specialShot1Count = count;
+    }
+
+    public void setSpecialShot2Count(int count) {
+        this.specialShot2Count = count;
     }
 
     /**
