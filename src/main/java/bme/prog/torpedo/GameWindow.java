@@ -62,6 +62,35 @@ public class GameWindow extends JFrame {
 
         topPanel.add(btnSzoenyeg);
         topPanel.add(btnCelzott);
+
+        JButton btnSave = new JButton("Mentés és Kilépés");
+        btnSave.addActionListener(e -> {
+            // 1. Véletlen 4 karakteres kód generálása (A-Z és 0-9)
+            String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            StringBuilder codeBuilder = new StringBuilder();
+            java.util.Random rnd = new java.util.Random();
+            for (int i = 0; i < 4; i++) {
+                codeBuilder.append(chars.charAt(rnd.nextInt(chars.length())));
+            }
+            String saveCode = codeBuilder.toString();
+            String filename = "save_" + saveCode + ".dat";
+
+            // 2. A teljes 'game' objektum fájlba írása szerializációval
+            try (java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(new java.io.FileOutputStream(filename))) {
+                oos.writeObject(game);
+                
+                JOptionPane.showMessageDialog(GameWindow.this, 
+                    "A játék sikeresen elmentve!\n\nA kódod: " + saveCode + "\n\nEzt jegyezd meg a betöltéshez!");
+                
+                dispose(); // Bezárjuk a csatateret
+                new MainMenu().setVisible(true); // Vissza a főmenübe
+                
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(GameWindow.this, "Hiba a mentés során: " + ex.getMessage(), "Hiba", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        });
+        topPanel.add(btnSave);
         add(topPanel, BorderLayout.NORTH);
         
         // --- TÁBLÁK LÉTREHOZÁSA ÉS ELHELYEZÉSE (KÖZÉPRE - CENTER) ---
@@ -81,6 +110,28 @@ public class GameWindow extends JFrame {
                     playerButtons[r][c].setBackground(Color.GREEN);
                 }
             }
+        }
+        for (Coordinate c : game.getPlayerHitCells()) {
+            CellButton btn = enemyButtons[c.getRow()][c.getCol()];
+            btn.setBackground(Color.RED);
+            for (ActionListener al : btn.getActionListeners()) btn.removeActionListener(al);
+        }
+        
+        // Játékos mellélövései (Kék) és gombok lezárása
+        for (Coordinate c : game.getPlayerMissedCells()) {
+            CellButton btn = enemyButtons[c.getRow()][c.getCol()];
+            btn.setBackground(Color.BLUE);
+            for (ActionListener al : btn.getActionListeners()) btn.removeActionListener(al);
+        }
+        
+        // Gép találatai a saját tábládon (Piros)
+        for (Coordinate c : game.getBotHitCells()) {
+            playerButtons[c.getRow()][c.getCol()].setBackground(Color.RED);
+        }
+        
+        // Gép mellélövései a saját tábládon (Kék)
+        for (Coordinate c : game.getBotMissedCells()) {
+            playerButtons[c.getRow()][c.getCol()].setBackground(Color.BLUE);
         }
     }
 

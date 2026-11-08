@@ -6,22 +6,28 @@ import java.util.Random;
 
 import bme.prog.torpedo.Ship.Direction;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
-import bme.prog.torpedo.Ship.Direction;
+import java.io.Serializable;
 
 /**
  * A Torpedó játék központi vezérlője (Modell / Controller).
  * Felelős a táblák kezeléséért, a különleges lövésekért, a körök váltásáért,
- * valamint a számítógépes ellenfél (AI) vadászó és véletlenszerű logikájáért.
+ * valamint a bot vadászó és véletlenszerű logikájáért.
  */
-public class Game {
+public class Game implements Serializable{
 
     private final Board playerBoard;
     private final Board enemyBoard;
     private boolean isPlayerTurn;
+
+    private final List<Coordinate> playerHitCells = new ArrayList<>();
+    private final List<Coordinate> playerMissedCells = new ArrayList<>();
+    private final List<Coordinate> botHitCells = new ArrayList<>();
+    private final List<Coordinate> botMissedCells = new ArrayList<>();
+
+    public List<Coordinate> getPlayerHitCells() { return playerHitCells; }
+    public List<Coordinate> getPlayerMissedCells() { return playerMissedCells; }
+    public List<Coordinate> getBotHitCells() { return botHitCells; }
+    public List<Coordinate> getBotMissedCells() { return botMissedCells; }
 
     // --- BOT INTELLIGENS MEMÓRIÁJA (Vadászat) ---
     private final Random random;
@@ -134,6 +140,9 @@ public class Game {
 
         ShotResult result = executeShot(enemyBoard, target, activePlayerShot);
 
+        playerHitCells.addAll(result.hitCells);
+        playerMissedCells.addAll(result.missedCells);
+
         // Lőszer levonása és fegyver visszaállítása alaphelyzetbe (0)
         if (activePlayerShot == 1) playerSpec1--;
         if (activePlayerShot == 2) playerSpec2--;
@@ -209,6 +218,10 @@ public class Game {
         ShotResult result = executeShot(playerBoard, target, botShotType);
         if (botShotType == 1) botSpec1--;
         if (botShotType == 2) botSpec2--;
+
+        //gép lövéseinek eltárolása
+        botHitCells.addAll(result.hitCells);
+        botMissedCells.addAll(result.missedCells);
 
         // Eltároljuk a kilőtt mezőket a gép memóriájában, hogy ne lőjön ide újra
         for (Coordinate hitC : result.hitCells) {

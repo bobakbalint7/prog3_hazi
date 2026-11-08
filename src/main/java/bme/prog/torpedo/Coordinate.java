@@ -1,8 +1,9 @@
 package bme.prog.torpedo;
 
+import java.io.Serializable;
 import java.util.Objects;
-
-public class Coordinate {
+import java.io.Serializable;
+public class Coordinate implements Serializable{
     private final int row; // Y coordinate
     private final int col; // X coordinate
 

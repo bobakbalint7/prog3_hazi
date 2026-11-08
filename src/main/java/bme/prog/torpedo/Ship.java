@@ -2,8 +2,8 @@ package bme.prog.torpedo;
 
 import java.util.ArrayList;
 import java.util.List;
-
-public class Ship {
+import java.io.Serializable;
+public class Ship implements Serializable{
     private final List<Coordinate> coordinates;
 
     public enum Direction{

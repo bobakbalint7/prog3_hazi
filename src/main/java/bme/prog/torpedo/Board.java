@@ -1,4 +1,5 @@
 package bme.prog.torpedo;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.Set;
  * A játéktáblát reprezentáló osztály. 
  * Felelős a hajók tárolásáért, valamint a beérkező lövések kiértékeléséért.
  */
-public class Board {
+public class Board implements Serializable {
     
     /** A már leadott lövések koordinátáinak halmaza a duplikációk elkerülésére. */
     private final Set<Coordinate> firedShots;
