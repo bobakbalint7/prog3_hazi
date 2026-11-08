@@ -38,6 +38,14 @@ public class SetupWindow extends JFrame {
         JPanel settingsPanel = new JPanel(new GridLayout(8, 2, 10, 10));
         settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        //Újrakezdés
+        JButton resetBtn = new JButton("Tábla Törlése");
+        resetBtn.addActionListener(e -> {
+            dispose(); // Bezárja az elrontott ablakot
+            new SetupWindow().setVisible(true); // Nyit egy teljesen újat
+        });
+        settingsPanel.add(resetBtn);
+        
         settingsPanel.add(new JLabel("5 hosszú hajók száma:"));
         spin5 = new JSpinner(new SpinnerNumberModel(1, 0, 5, 1)); // Alap: 1 db
         settingsPanel.add(spin5);
@@ -68,7 +76,7 @@ public class SetupWindow extends JFrame {
 
         statusLabel = new JLabel("Állítsd be a darabszámokat!");
         statusLabel.setForeground(Color.RED);
-        settingsPanel.add(statusLabel);
+        
 
         add(settingsPanel, BorderLayout.WEST);
 
@@ -92,6 +100,10 @@ public class SetupWindow extends JFrame {
             }
         }
         add(gridPanel, BorderLayout.CENTER);
+
+        statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); 
+        add(statusLabel, BorderLayout.SOUTH);
     }
 
     /**
@@ -127,10 +139,14 @@ public class SetupWindow extends JFrame {
             statusLabel.setText("Minden hajó lent van!");
             statusLabel.setForeground(Color.GREEN);
             
-            // Játék indítása
+            pendingGame.placeBotShipsRandomly(
+                (Integer) spin5.getValue(), 
+                (Integer) spin4.getValue(), 
+                (Integer) spin3.getValue(), 
+                (Integer) spin2.getValue()
+            );
+            
             JOptionPane.showMessageDialog(this, "A játék indul!");
-            
-            
             
             dispose(); // Beállító ablak bezárása
             new GameWindow(pendingGame).setVisible(true); // Fő játékablak megnyitása

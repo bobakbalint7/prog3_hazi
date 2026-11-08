@@ -3,6 +3,8 @@ package bme.prog.torpedo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import bme.prog.torpedo.Ship.Direction;
 /**
  * A Torpedó játék központi vezérlője.
  * Felelős a táblák kezeléséért, a körök váltásáért, valamint a számítógépes ellenfél logikájáért.
@@ -29,7 +31,7 @@ public class Game {
     //Lőtt cella környezetében 1 hajó cella kilövése
     private int specialShot2Count;
 
-    // ... konstruktor ...
+   
 
     
     /**
@@ -197,5 +199,58 @@ public class Game {
      */
     private boolean isValidCoordinate(Coordinate c) {
         return c.getRow() >= 0 && c.getRow() <= 9 && c.getCol() >= 0 && c.getCol() <= 9;
+    }
+
+    //A bot hajóinak lerakása
+    /**
+     * A beállított darabszámok alapján véletlenszerűen elhelyezi a gép hajóit az ellenfél tábláján.
+     * Ezt a metódust hívja meg az előkészítő ablak, amikor a játékos végzett.
+     */
+    public void placeBotShipsRandomly(int count5, int count4, int count3, int count2) {
+        placeRandomShipsOfLength(5, count5);
+        placeRandomShipsOfLength(4, count4);
+        placeRandomShipsOfLength(3, count3);
+        placeRandomShipsOfLength(2, count2);
+    }
+
+    /**
+     * Belső segédmetódus, ami egy adott méretű hajóból tesz le megadott mennyiséget.
+     * Legfeljebb 1000-szer próbálkozik, nem biztos hogy egy adott hajó halmazt le tudunk rakni.
+     */
+    private void placeRandomShipsOfLength(int length, int count) {
+        for (int i = 0; i < count; i++) {
+            boolean placed = false;
+            int attempts = 0; 
+            
+            // Addig pörög, amíg le nem tette a hajót, vagy el nem érte az 1000 próbát
+            while (!placed && attempts < 1000) {
+                attempts++;
+                
+                // 1. Véletlen kezdőpont generálása a 10x10-es rácson (0-9)
+                int r = random.nextInt(10);
+                int c = random.nextInt(10);
+                
+                // Véletlen irány 
+                Direction dir = random.nextBoolean() ? Direction.HORIZONTAL : Direction.VERTICAL;
+                
+                try {
+                    // Megpróbálja legenerálni és letenni
+                    Ship botShip = Ship.createShip(r, c, length, dir);
+                    placeEnemyShip(botShip);
+                    
+                    // A hajó lent van
+                    placed = true; 
+                    
+                } catch (IllegalArgumentException e) {
+                   // A gép újragenerálja.
+                }
+            }
+            
+            // Ha 1000 próba után is false maradt a placed, akkor a tábla fizikailag megtelt.
+            if (!placed) {
+                System.out.println("Figyelmeztetés: A gép kihagyott egy " + length + 
+                                   " hosszú hajót, mert 1000 próbából sem fért el a pályán!");
+            }
+        }
     }
 }
