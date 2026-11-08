@@ -38,13 +38,7 @@ public class SetupWindow extends JFrame {
         JPanel settingsPanel = new JPanel(new GridLayout(8, 2, 10, 10));
         settingsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        //Újrakezdés
-        JButton resetBtn = new JButton("Tábla Törlése");
-        resetBtn.addActionListener(e -> {
-            dispose(); // Bezárja az elrontott ablakot
-            new SetupWindow().setVisible(true); // Nyit egy teljesen újat
-        });
-        settingsPanel.add(resetBtn);
+        
         
         settingsPanel.add(new JLabel("5 hosszú hajók száma:"));
         spin5 = new JSpinner(new SpinnerNumberModel(1, 0, 5, 1)); // Alap: 1 db
@@ -73,6 +67,14 @@ public class SetupWindow extends JFrame {
         startPlacementBtn = new JButton("Hajók Lerakása");
         startPlacementBtn.addActionListener(e -> startPlacementPhase());
         settingsPanel.add(startPlacementBtn);
+
+        //Újrakezdés
+        JButton resetBtn = new JButton("Tábla Törlése");
+        resetBtn.addActionListener(e -> {
+            dispose(); // Bezárja az elrontott ablakot
+            new SetupWindow().setVisible(true); // Nyit egy teljesen újat
+        });
+        settingsPanel.add(resetBtn);
 
         statusLabel = new JLabel("Állítsd be a darabszámokat!");
         statusLabel.setForeground(Color.RED);

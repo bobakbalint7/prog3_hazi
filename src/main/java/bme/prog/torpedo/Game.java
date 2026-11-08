@@ -5,35 +5,48 @@ import java.util.List;
 import java.util.Random;
 
 import bme.prog.torpedo.Ship.Direction;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import bme.prog.torpedo.Ship.Direction;
+
 /**
- * A Torpedó játék központi vezérlője.
- * Felelős a táblák kezeléséért, a körök váltásáért, valamint a számítógépes ellenfél logikájáért.
+ * A Torpedó játék központi vezérlője (Modell / Controller).
+ * Felelős a táblák kezeléséért, a különleges lövésekért, a körök váltásáért,
+ * valamint a számítógépes ellenfél (AI) vadászó és véletlenszerű logikájáért.
  */
 public class Game {
+
     private final Board playerBoard;
     private final Board enemyBoard;
     private boolean isPlayerTurn;
 
-    //Bot memória
+    // --- BOT INTELLIGENS MEMÓRIÁJA (Vadászat) ---
     private final Random random;
-    /** Igaz, ha a gép épp egy megsebzett hajót próbál elsüllyeszteni (vadászik). */
+    /** Tárolja, hova lőtt már a gép, hogy soha ne lőjön kétszer ugyanoda. */
+    private final List<Coordinate> botFiredShots;
+    /** Igaz, ha a gép épp egy megsebzett hajót próbál elsüllyeszteni. */
     private boolean isHunting;
-    /** A hajó legelső eltalált koordinátája (ide térünk vissza irányváltáskor). */
+    /** A hajó legelső eltalált koordinátája (ide tér vissza irányváltáskor). */
     private Coordinate firstHit;
-    /** A legutóbbi sikeres találat koordinátája (innen lépünk tovább). */
+    /** A legutóbbi sikeres találat koordinátája (innen lép tovább). */
     private Coordinate lastHit;
     /** A jelenlegi lövési irány (0: Jobbra, 1: Le, 2: Balra, 3: Fel). */
     private int huntDirection;
     /** Számon tartja, hány irányt próbált már ki a gép a 4-ből. */
     private int directionsTried;
-    //Találatkor az egész hajó kilövése
-    private int specialShot1Count;
-    //Lőtt cella környezetében 1 hajó cella kilövése
-    private int specialShot2Count;
 
-   
+    // --- KÜLÖNLEGES LÖVÉSEK KÉSZLETE (Lőszer) ---
+    private int playerSpec1; // Játékos 1. extrája (Szőnyegbomba - egész hajó kilövése)
+    private int playerSpec2; // Játékos 2. extrája (Célzott lövés - 3x3-as keresés)
+    private int botSpec1;    // Gép 1. extrája
+    private int botSpec2;    // Gép 2. extrája
 
-    
+    /** Milyen fegyverrel lő a játékos a következő kattintásnál? (0=Sima, 1=Szőnyeg, 2=Célzott) */
+    private int activePlayerShot;
+
     /**
      * Létrehoz egy új játékot, inicializálja a táblákat és a gép memóriáját.
      */
@@ -43,169 +56,332 @@ public class Game {
         this.isPlayerTurn = true;
 
         this.random = new Random();
+        this.botFiredShots = new ArrayList<>();
         this.isHunting = false;
         this.firstHit = null;
         this.lastHit = null;
         this.huntDirection = 0;
         this.directionsTried = 0;
-        this.specialShot1Count=0;
-        this.specialShot2Count=0;
+
+        this.playerSpec1 = 0;
+        this.playerSpec2 = 0;
+        this.botSpec1 = 0;
+        this.botSpec2 = 0;
+        this.activePlayerShot = 0;
     }
+
+    // --- SETTEREK ÉS GETTEREK A KÜLÖNLEGES LÖVÉSEKHEZ ---
+
+    /** A SetupWindow hívja meg: beállítja az 1. különleges lövés darabszámát mindkét félnek. */
     public void setSpecialShot1Count(int count) {
-        this.specialShot1Count = count;
+        this.playerSpec1 = count;
+        this.botSpec1 = count;
     }
 
+    /** A SetupWindow hívja meg: beállítja a 2. különleges lövés darabszámát mindkét félnek. */
     public void setSpecialShot2Count(int count) {
-        this.specialShot2Count = count;
+        this.playerSpec2 = count;
+        this.botSpec2 = count;
     }
 
-    /**
-     * Elhelyez egy hajót a játékos tábláján.
-     * @param playerShip A lerakandó hajó.
-     */
+    /** Beállítja, hogy a következő kattintásnál milyen fegyvert használjon a játékos. */
+    public void setActivePlayerShot(int type) {
+        this.activePlayerShot = type;
+    }
+
+    public int getPlayerSpec1() {
+        return playerSpec1;
+    }
+
+    public int getPlayerSpec2() {
+        return playerSpec2;
+    }
+
+    // --- TÁBLA ÉS ÁLLAPOT KEZELÉS ---
+
     public void placePlayerShip(Ship playerShip) {
         playerBoard.placeShip(playerShip);
     }
 
-    /**
-     * Elhelyez egy hajót az ellenfél (gép) tábláján.
-     * @param ship A lerakandó hajó.
-     */
     public void placeEnemyShip(Ship ship) {
         enemyBoard.placeShip(ship);
     }
 
-    /**
-     * Feldolgoz egy teljes kört: leadja a lövést az aktuális célpontra, majd átadja a kört.
-     * @param target A célkoordináta, ahova a lövés érkezik.
-     * @return true, ha a lövés talált, egyébként false.
-     */
-    public boolean playTurn(Coordinate target) {
-        if (isGameOver()) {
-            throw new IllegalStateException("A játéknak már vége, nem lehet többet lőni!");
-        }
-
-        boolean wasHit;
-        if (isPlayerTurn) {
-            wasHit = enemyBoard.hit(target);
-        } else {
-            wasHit = playerBoard.hit(target);
-        }
-        
-        isPlayerTurn = !isPlayerTurn;
-        return wasHit;
-    }
-
-    /**
-     * Ellenőrzi, hogy véget ért-e a mérkőzés.
-     * @return true, ha valamelyik játékos összes hajója elsüllyedt.
-     */
     public boolean isGameOver() {
         return playerBoard.areAllShipsSunk() || enemyBoard.areAllShipsSunk();
     }
 
-    /**
-     * Lekérdezi, hogy a játékos köre van-e.
-     * @return true, ha a játékos jön.
-     */
     public boolean isPlayerTurn() {
         return isPlayerTurn;
     }
 
-    /**
-     * A Bot  intelligens lövési logikája.
-     * Ha találatot ér el, célirányosan követi a hajót, amíg az el nem süllyed.
-     */
-    public Coordinate playBotTurn() {
-        Coordinate target = null;
-
-        // 1. FÁZIS: Vadászat (ha korábban megsebeztünk egy hajót)
-        if (isHunting) {
-            // Eltolási vektorok: Jobbra(0, 1), Le(1, 0), Balra(0, -1), Fel(-1, 0)
-            int[][] dirs = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
-
-            // Addig próbáljuk a jelenlegi irányt, amíg valid mezőt nem találunk, 
-            // vagy amíg ki nem fogytunk a 4 irányból
-            while (target == null && directionsTried < 4) {
-                int r = lastHit.getRow() + dirs[huntDirection][0];
-                int c = lastHit.getCol() + dirs[huntDirection][1];
-                Coordinate potentialTarget = new Coordinate(r, c);
-
-                if (isValidCoordinate(potentialTarget) && !playerBoard.hasBeenShot(potentialTarget)) {
-                    target = potentialTarget; // Megvan a jó célpont!
-                } else {
-                    // Ha falba ütköztünk, vagy ide már lőttünk: irányváltás és visszaugrás az eredeti találathoz
-                    huntDirection = (huntDirection + 1) % 4;
-                    lastHit = firstHit;
-                    directionsTried++;
-                }
-            }
-
-            // Ha mind a 4 irány zsákutca (a hajó valószínűleg elsüllyedt), visszatérünk vak lövésre
-            if (directionsTried >= 4) {
-                isHunting = false;
-            }
-        }
-
-        // 2. FÁZIS: Vak lövés (ha nem vadászunk)
-        while (target == null) {
-            int r = random.nextInt(10);
-            int c = random.nextInt(10);
-            Coordinate randomTarget = new Coordinate(r, c);
-
-            if (!playerBoard.hasBeenShot(randomTarget)) {
-                target = randomTarget;
-            }
-        }
-
-        // 3. Lövés leadása (ez automatikusan át is adja a kört a playTurn-ben)
-        boolean wasHit = playTurn(target);
-
-        // 4. FÁZIS: A memória frissítése az eredmény alapján
-        if (wasHit) {
-            //Megkérdezzük, hogy elsüllyedt-e az a hajó, amit most eltaláltunk
-            if (playerBoard.isShipSunkAt(target)) {
-                isHunting = false; //Elsüllyedt,  vadászat véget ér, legközelebb random lő.
-            } 
-            else {
-                // Ha még nem süllyedt el, folytatjuk a vadászatot
-                if (!isHunting) {
-                    isHunting = true;
-                    firstHit = target;
-                    lastHit = target;
-                    huntDirection = 0; 
-                    directionsTried = 0;
-                } else {
-                    lastHit = target;
-                    directionsTried = 0; 
-                }
-            }
-        } else {
-            // Ha mellélőttünk
-            if (isHunting) {
-                huntDirection = (huntDirection + 1) % 4;
-                lastHit = firstHit; 
-                directionsTried++;
-                
-            }
-        }
-        return target;
-    }
     public boolean hasPlayerShipAt(Coordinate c) {
         return playerBoard.hasShipAt(c);
     }
+
+    // --- JÁTÉKOS LÖVÉSE ---
+
     /**
-     * Belső segédmetódus annak ellenőrzésére, hogy a koordináta a 10x10-es pályán belül van-e.
+     * Végrehajtja a játékos lövését az ellenséges táblán az aktív fegyverrel.
+     * 
+     * @param target A megkattintott célkoordináta.
+     * @return A találatokat és mellélövéseket tartalmazó ShotResult csomag.
      */
+    public ShotResult playTurn(Coordinate target) {
+        if (isGameOver()) {
+            throw new IllegalStateException("A játéknak már vége van!");
+        }
+
+        ShotResult result = executeShot(enemyBoard, target, activePlayerShot);
+
+        // Lőszer levonása és fegyver visszaállítása alaphelyzetbe (0)
+        if (activePlayerShot == 1) playerSpec1--;
+        if (activePlayerShot == 2) playerSpec2--;
+        activePlayerShot = 0;
+
+        isPlayerTurn = false;
+        return result;
+    }
+
+    // --- GÉP (BOT) LÖVÉSE: VADÁSZAT + RANDOM + 20% SPECIÁLIS ---
+
+    /**
+     * Végrehajtja a gép lépését:
+     * 1. A kör elején 20% eséllyel kiválaszt egy elérhető különleges lövést.
+     * 2. Ha vadászik (isHunting), a megsebzett hajó körül próbálkozik 4 irányban;
+     *    különben véletlenszerűen lő egy még érintetlen mezőre.
+     * 3. A találat eredménye alapján frissíti a vadász-memóriát.
+     * 
+     * @return A gép lövésének eredményét tartalmazó ShotResult csomag.
+     */
+    public ShotResult playBotTurn() {
+        int botShotType = 0;
+
+        // 1. 20% esély különleges lövésre a kör elején, ha van még lőszere
+        if (random.nextInt(100) < 20) {
+            if (botSpec1 > 0 && botSpec2 > 0) {
+                botShotType = random.nextBoolean() ? 1 : 2;
+            } else if (botSpec1 > 0) {
+                botShotType = 1;
+            } else if (botSpec2 > 0) {
+                botShotType = 2;
+            }
+        }
+
+        Coordinate target = null;
+
+        // 2. Célpont kiválasztása: Vadászat VAGY Véletlen lövés
+        if (isHunting) {
+            boolean validTargetFound = false;
+
+            while (!validTargetFound && directionsTried < 4) {
+                int r = lastHit.getRow();
+                int c = lastHit.getCol();
+
+                if (huntDirection == 0) c++;      // 0: Jobbra
+                else if (huntDirection == 1) r++; // 1: Le
+                else if (huntDirection == 2) c--; // 2: Balra
+                else if (huntDirection == 3) r--; // 3: Fel
+
+                Coordinate candidate = new Coordinate(r, c);
+
+                // Csak akkor jó a célpont, ha pályán belül van ÉS még nem lőtt oda a gép
+                if (isValidCoordinate(candidate) && !hasBotShotAt(candidate)) {
+                    target = candidate;
+                    validTargetFound = true;
+                } else {
+                    // Falnak ütközött vagy már lőtt ide -> irányváltás az első találattól!
+                    changeHuntDirection();
+                }
+            }
+
+            // Ha mind a 4 irány elakadt, kilépünk a vadászatból és random lövünk
+            if (!validTargetFound) {
+                resetHuntingMemory();
+                target = getRandomUnshotCoordinate();
+            }
+        } else {
+            // Alapállapot: véletlenszerű lövés egy még nem lőtt mezőre
+            target = getRandomUnshotCoordinate();
+        }
+
+        // 3. Lövés végrehajtása és lőszer levonása
+        ShotResult result = executeShot(playerBoard, target, botShotType);
+        if (botShotType == 1) botSpec1--;
+        if (botShotType == 2) botSpec2--;
+
+        // Eltároljuk a kilőtt mezőket a gép memóriájában, hogy ne lőjön ide újra
+        for (Coordinate hitC : result.hitCells) {
+            recordBotShot(hitC);
+        }
+        for (Coordinate missC : result.missedCells) {
+            recordBotShot(missC);
+        }
+
+        // 4. Vadász-memória frissítése a lövés eredménye alapján
+        if (!result.hitCells.isEmpty()) {
+            // Tényleges találati pont (Célzott lövésnél ez lehet a szomszédos mező is!)
+            Coordinate actualHit = result.hitCells.get(0);
+            Ship hitShip = playerBoard.getShipAt(actualHit);
+
+            if (hitShip != null && hitShip.isSunken()) {
+                // Ha a hajó elsüllyedt (pl. utolsó találat vagy Szőnyegbomba), vége a vadászatnak
+                resetHuntingMemory();
+            } else {
+                // A hajó megsérült, de még nem süllyedt el -> Vadászat indul vagy folytatódik!
+                if (!isHunting) {
+                    isHunting = true;
+                    firstHit = actualHit;
+                    lastHit = actualHit;
+                    huntDirection = 0;
+                    directionsTried = 0;
+                } else {
+                    lastHit = actualHit;
+                }
+            }
+        } else {
+            // Mellélövés (Víz): ha épp vadászott, akkor rossz irányba ment, forduljon meg!
+            if (isHunting) {
+                changeHuntDirection();
+            }
+        }
+
+        isPlayerTurn = true;
+        return result;
+    }
+
+    // --- UNIVERZÁLIS LÖVÉS-VÉGREHAJTÓ LOGIKA ---
+
+    /**
+     * Végrehajtja a megadott típusú lövést a céltáblán.
+     * 
+     * @param targetBoard A tábla, amire a lövés érkezik.
+     * @param target A célzott koordináta.
+     * @param shotType 0 = Sima lövés, 1 = Szőnyegbomba, 2 = Célzott (3x3) lövés.
+     * @return A eltalált és mellélőtt mezők listája.
+     */
+    private ShotResult executeShot(Board targetBoard, Coordinate target, int shotType) {
+        ShotResult result = new ShotResult();
+
+        if (shotType == 1) { // 1. SZŐNYEGBOMBÁZÁS
+            Ship ship = targetBoard.getShipAt(target);
+            if (ship != null) {
+                // Készítünk egy másolatot a listáról, 
+                // miközben a hitTaken() egyesével törölgeti őket belőle!
+                List<Coordinate> coordsCopy = new ArrayList<>(ship.getCoordinates());
+                
+                for (Coordinate c : coordsCopy) {
+                    result.hitCells.add(c);
+                    registerHitOnBoard(targetBoard, ship, c);
+                }
+            } else {
+                result.missedCells.add(target);
+            }
+        }
+        else if (shotType == 2) { // 2. CÉLZOTT LÖVÉS: Mellélövéskor 3x3-as környezetben keres 1 hajócellát
+            Ship ship = targetBoard.getShipAt(target);
+            if (ship != null) {
+                result.hitCells.add(target);
+                registerHitOnBoard(targetBoard, ship, target);
+            } else {
+                result.missedCells.add(target);
+                boolean found = false;
+
+                for (int r = target.getRow() - 1; r <= target.getRow() + 1; r++) {
+                    for (int c = target.getCol() - 1; c <= target.getCol() + 1; c++) {
+                        Coordinate adj = new Coordinate(r, c);
+                        if (isValidCoordinate(adj)) {
+                            Ship adjShip = targetBoard.getShipAt(adj);
+                            if (adjShip != null) {
+                                result.hitCells.add(adj);
+                                registerHitOnBoard(targetBoard, adjShip, adj);
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (found) break; // Csak az első megtalált hajócellát lövi ki
+                }
+            }
+        } 
+        else { // 0. SIMA LÖVÉS
+            Ship ship = targetBoard.getShipAt(target);
+            if (ship != null) {
+                result.hitCells.add(target);
+                registerHitOnBoard(targetBoard, ship, target);
+            } else {
+                result.missedCells.add(target);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Központi segédmetódus a találat elkönyvelésére a Modellben.
+     * (Ha a te Ship vagy Board osztályodban máshogy hívják a sebzés metódust,
+     * csak ebben az egy metódusban kell átírnod!)
+     */
+    private void registerHitOnBoard(Board board, Ship ship, Coordinate hitCoord) {
+        ship.hitTaken(hitCoord); // VAGY: board.shoot(hitCoord); / ship.hit(hitCoord);
+    }
+
+    // --- BOT VADÁSZAT ÉS KOORDINÁTA SEGÉDMETÓDUSOK ---
+
+    private void changeHuntDirection() {
+        huntDirection = (huntDirection + 1) % 4;
+        directionsTried++;
+        lastHit = firstHit; // Visszaugrunk az első találatra, és onnan indulunk az új irányba
+    }
+
+    private void resetHuntingMemory() {
+        isHunting = false;
+        firstHit = null;
+        lastHit = null;
+        huntDirection = 0;
+        directionsTried = 0;
+    }
+
+    private Coordinate getRandomUnshotCoordinate() {
+        for (int attempts = 0; attempts < 1000; attempts++) {
+            Coordinate c = new Coordinate(random.nextInt(10), random.nextInt(10));
+            if (!hasBotShotAt(c)) {
+                return c;
+            }
+        }
+        // Tartalék ág, ha szinte minden mezőre lőtt már
+        for (int r = 0; r < 10; r++) {
+            for (int col = 0; col < 10; col++) {
+                Coordinate c = new Coordinate(r, col);
+                if (!hasBotShotAt(c)) {
+                    return c;
+                }
+            }
+        }
+        return new Coordinate(0, 0);
+    }
+
+    private boolean hasBotShotAt(Coordinate target) {
+        for (Coordinate c : botFiredShots) {
+            if (c.getRow() == target.getRow() && c.getCol() == target.getCol()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void recordBotShot(Coordinate target) {
+        if (!hasBotShotAt(target)) {
+            botFiredShots.add(target);
+        }
+    }
+
     private boolean isValidCoordinate(Coordinate c) {
         return c.getRow() >= 0 && c.getRow() <= 9 && c.getCol() >= 0 && c.getCol() <= 9;
     }
 
-    //A bot hajóinak lerakása
-    /**
-     * A beállított darabszámok alapján véletlenszerűen elhelyezi a gép hajóit az ellenfél tábláján.
-     * Ezt a metódust hívja meg az előkészítő ablak, amikor a játékos végzett.
-     */
+    // --- A BOT HAJÓINAK AUTOMATIKUS LERAKÁSA ---
+
     public void placeBotShipsRandomly(int count5, int count4, int count3, int count2) {
         placeRandomShipsOfLength(5, count5);
         placeRandomShipsOfLength(4, count4);
@@ -213,44 +389,38 @@ public class Game {
         placeRandomShipsOfLength(2, count2);
     }
 
-    /**
-     * Belső segédmetódus, ami egy adott méretű hajóból tesz le megadott mennyiséget.
-     * Legfeljebb 1000-szer próbálkozik, nem biztos hogy egy adott hajó halmazt le tudunk rakni.
-     */
     private void placeRandomShipsOfLength(int length, int count) {
         for (int i = 0; i < count; i++) {
             boolean placed = false;
-            int attempts = 0; 
-            
-            // Addig pörög, amíg le nem tette a hajót, vagy el nem érte az 1000 próbát
+            int attempts = 0;
+
             while (!placed && attempts < 1000) {
                 attempts++;
-                
-                // 1. Véletlen kezdőpont generálása a 10x10-es rácson (0-9)
                 int r = random.nextInt(10);
                 int c = random.nextInt(10);
-                
-                // Véletlen irány 
                 Direction dir = random.nextBoolean() ? Direction.HORIZONTAL : Direction.VERTICAL;
-                
+
                 try {
-                    // Megpróbálja legenerálni és letenni
                     Ship botShip = Ship.createShip(r, c, length, dir);
                     placeEnemyShip(botShip);
-                    
-                    // A hajó lent van
-                    placed = true; 
-                    
+                    placed = true;
                 } catch (IllegalArgumentException e) {
-                   // A gép újragenerálja.
+                    // Ütközés vagy pályáról lelógás esetén újrapróbálkozik
                 }
             }
-            
-            // Ha 1000 próba után is false maradt a placed, akkor a tábla fizikailag megtelt.
+
             if (!placed) {
-                System.out.println("Figyelmeztetés: A gép kihagyott egy " + length + 
+                System.out.println("Figyelmeztetés: A gép kihagyott egy " + length +
                                    " hosszú hajót, mert 1000 próbából sem fért el a pályán!");
             }
         }
     }
+
+    // --- DTO ADATCSOMAG A GUI SZÁMÁRA ---
+
+    public static class ShotResult {
+        public List<Coordinate> hitCells = new ArrayList<>();
+        public List<Coordinate> missedCells = new ArrayList<>();
+    }
 }
+

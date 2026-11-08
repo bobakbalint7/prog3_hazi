@@ -138,4 +138,15 @@ public class Board {
         }
         return false;
     }
+
+    public Ship getShipAt(Coordinate target) {
+        for (Ship ship : ships) {
+            for (Coordinate c : ship.getCoordinates()) {
+                if (c.getRow() == target.getRow() && c.getCol() == target.getCol()) {
+                    return ship;
+                }
+            }
+        }
+        return null;
+    }
 }
