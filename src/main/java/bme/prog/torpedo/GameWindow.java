@@ -7,27 +7,35 @@ import java.awt.event.ActionListener;
 //import java.util.List; 
 
 /**
- * A játék grafikus főablaka (Nézet és Vezérlő).
- * Felelős a felhasználói felület (ablak, táblák, gombok) megjelenítéséért, 
- * valamint a játékos egérkattintásainak lekezeléséért.
+ * A játék grafikus főablaka (Nézet és Vezérlő egyben az MVC mintában).
+ * Felelős a teljes felhasználói felület (ablak, játéktáblák, fegyvergombok, mentés gomb) 
+ * megjelenítéséért és vizuális frissítéséért, valamint a játékos egérkattintásainak 
+ * (lövések és fegyverváltások) lekezeléséért és a Modell (Game) felé történő továbbításáért.
  */
 public class GameWindow extends JFrame {
     
-    /** A játék belső logikáját (Modell) összefogó motor. */
+    /** A játék belső logikáját (Modell) összefogó és irányító motor példánya. */
     private final Game game;
     
-    /** A játékos saját táblájának gombjait tároló 10x10-es mátrix a memóriában. */
+    /** A játékos saját táblájának gombjait tároló 10x10-es mátrix a grafikus memóriában. */
     private final CellButton[][] playerButtons = new CellButton[10][10];
     
-    /** Az ellenfél táblájának gombjait tároló 10x10-es mátrix a memóriában. */
+    /** Az ellenfél táblájának gombjait tároló 10x10-es mátrix a grafikus memóriában. */
     private final CellButton[][] enemyButtons = new CellButton[10][10];
 
-    // Fegyvergombok (Osztályszintű változók lettek, hogy lövés után frissíteni tudjuk rajtuk a lőszert!)
+    /** Grafikus gomb a Szőnyegbombázás (1. speciális fegyver) kiválasztására. Osztályszintű, hogy lövés után frissíthető legyen rajta a maradék lőszer. */
     private JButton btnSzoenyeg;
+    
+    /** Grafikus gomb a Célzott lövés (2. speciális fegyver) kiválasztására. Osztályszintű, hogy lövés után frissíthető legyen rajta a maradék lőszer. */
     private JButton btnCelzott;
 
     /**
-     * Létrehozza a főablakot, beállítja a méreteit, és elhelyezi rajta a két játéktáblát.
+     * Létrehozza a főablakot, beállítja a méreteit, és felépíti a teljes játékkörnyezetet.
+     * Magában foglalja a fegyvergombok és a mentés gomb inicializálását, a két játéktábla 
+     * legenerálását, valamint a játékállás vizuális rekonstruálását (zöld saját hajók, 
+     * és betöltés esetén a már meglőtt piros/kék cellák visszaállítását).
+     * 
+     * @param game A játék logikáját vezérlő {@code Game} objektum (akár új, akár betöltött).
      */
     public GameWindow(Game game) {
         this.game = game;
@@ -39,11 +47,12 @@ public class GameWindow extends JFrame {
         
         setLayout(new BorderLayout()); 
 
-        // --- FEGYVERVÁLASZTÓ GOMBOK LÉTREHOZÁSA (FELSŐ SÁV - NORTH) ---
+        // --- FEGYVERVÁLASZTÓ ÉS MENTÉS GOMBOK LÉTREHOZÁSA (FELSŐ SÁV - NORTH) ---
         JPanel topPanel = new JPanel();
         btnSzoenyeg = new JButton("Szőnyegbomba (" + game.getPlayerSpec1() + ")");
         btnCelzott = new JButton("Célzott lövés (" + game.getPlayerSpec2() + ")");
 
+        // Szőnyegbomba kiválasztása
         btnSzoenyeg.addActionListener(e -> {
             if (game.getPlayerSpec1() > 0) {
                 game.setActivePlayerShot(1);
@@ -52,6 +61,7 @@ public class GameWindow extends JFrame {
             }
         });
 
+        // Célzott lövés kiválasztása
         btnCelzott.addActionListener(e -> {
             if (game.getPlayerSpec2() > 0) {
                 game.setActivePlayerShot(2);
@@ -63,9 +73,10 @@ public class GameWindow extends JFrame {
         topPanel.add(btnSzoenyeg);
         topPanel.add(btnCelzott);
 
+        // Mentés és Kilépés gomb (Szerializációs logika)
         JButton btnSave = new JButton("Mentés és Kilépés");
         btnSave.addActionListener(e -> {
-            // 1. Véletlen 4 karakteres kód generálása (A-Z és 0-9)
+            // 1. Véletlen 4 karakteres alfanumerikus kód generálása a mentés azonosításához
             String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
             StringBuilder codeBuilder = new StringBuilder();
             java.util.Random rnd = new java.util.Random();
@@ -75,15 +86,17 @@ public class GameWindow extends JFrame {
             String saveCode = codeBuilder.toString();
             String filename = "save_" + saveCode + ".dat";
 
-            // 2. A teljes 'game' objektum fájlba írása szerializációval
+            // 2. A teljes 'game' objektum (Modell) bináris fájlba írása szerializációval
             try (java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(new java.io.FileOutputStream(filename))) {
                 oos.writeObject(game);
                 
                 JOptionPane.showMessageDialog(GameWindow.this, 
-                    "A játék sikeresen elmentve!\n\nA kódod: " + saveCode + "\n\nEzt jegyezd meg a betöltéshez!");
+    "A játék sikeresen elmentve!\n\n" +
+    "A kódod: " + saveCode + "\n\n" + 
+    "Ezt jegyezd meg a betöltéshez!");
                 
-                dispose(); // Bezárjuk a csatateret
-                new MainMenu().setVisible(true); // Vissza a főmenübe
+                dispose(); // Bezárjuk az aktuális csatateret
+                new MainMenu().setVisible(true); // Visszatérés a Főmenübe
                 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(GameWindow.this, "Hiba a mentés során: " + ex.getMessage(), "Hiba", JOptionPane.ERROR_MESSAGE);
@@ -93,7 +106,7 @@ public class GameWindow extends JFrame {
         topPanel.add(btnSave);
         add(topPanel, BorderLayout.NORTH);
         
-        // --- TÁBLÁK LÉTREHOZÁSA ÉS ELHELYEZÉSE (KÖZÉPRE - CENTER) ---
+        // --- JÁTÉKTÁBLÁK LÉTREHOZÁSA ÉS ELHELYEZÉSE (KÖZÉPRE - CENTER) ---
         JPanel playerPanel = createBoardPanel(playerButtons, "Saját táblád", false);
         JPanel enemyPanel = createBoardPanel(enemyButtons, "Ellenfél táblája", true);
 
@@ -102,7 +115,9 @@ public class GameWindow extends JFrame {
         boardsPanel.add(enemyPanel);
         add(boardsPanel, BorderLayout.CENTER); 
 
-        // --- A JÁTÉKOS SAJÁT HAJÓINAK KISZÍNEZÉSE ZÖLDRE INDULÁSKOR ---
+        // --- A JÁTÉKÁLLÁS VIZUÁLIS REKONSTRUÁLÁSA ---
+        
+        // 1. A játékos saját, még ép hajóinak kiszínezése zöldre az induláskor
         for (int r = 0; r < 10; r++) {
             for (int c = 0; c < 10; c++) {
                 Coordinate currentPos = new Coordinate(r, c);
@@ -111,32 +126,39 @@ public class GameWindow extends JFrame {
                 }
             }
         }
+        
+        // 2. A játékos már meglőtt, sikeres (Piros) célpontjainak visszaállítása és a gombok lezárása (Betöltés esetén)
         for (Coordinate c : game.getPlayerHitCells()) {
             CellButton btn = enemyButtons[c.getRow()][c.getCol()];
             btn.setBackground(Color.RED);
             for (ActionListener al : btn.getActionListeners()) btn.removeActionListener(al);
         }
         
-        // Játékos mellélövései (Kék) és gombok lezárása
+        // 3. A játékos már meglőtt, vízbe esett (Kék) célpontjainak visszaállítása és a gombok lezárása
         for (Coordinate c : game.getPlayerMissedCells()) {
             CellButton btn = enemyButtons[c.getRow()][c.getCol()];
             btn.setBackground(Color.BLUE);
             for (ActionListener al : btn.getActionListeners()) btn.removeActionListener(al);
         }
         
-        // Gép találatai a saját tábládon (Piros)
+        // 4. A gép sikeres (Piros) találatainak visszaállítása a saját tábládon
         for (Coordinate c : game.getBotHitCells()) {
             playerButtons[c.getRow()][c.getCol()].setBackground(Color.RED);
         }
         
-        // Gép mellélövései a saját tábládon (Kék)
+        // 5. A gép vízbe esett (Kék) mellélövéseinek visszaállítása a saját tábládon
         for (Coordinate c : game.getBotMissedCells()) {
             playerButtons[c.getRow()][c.getCol()].setBackground(Color.BLUE);
         }
     }
 
     /**
-     * Létrehoz és visszaad egy komplett játéktábla panelt.
+     * Létrehoz és visszaad egy komplett grafikus játéktábla panelt (címsorral és egy 10x10-es rácsba rendezett gombtömbbel).
+     * 
+     * @param buttonArray A 2D tömb, amibe a generált {@code CellButton} gombokat mentjük a későbbi hivatkozáshoz.
+     * @param title A tábla fölött megjelenő szöveges felirat (pl. "Saját táblád").
+     * @param isClickable {@code true}, ha a tábla gombjainak reagálniuk kell a kattintásokra (ez csak az ellenség táblájánál igaz).
+     * @return A felépített {@code JPanel}, ami tartalmazza a címet és a gombokat.
      */
     private JPanel createBoardPanel(CellButton[][] buttonArray, String title, boolean isClickable) {
         JPanel panel = new JPanel();
@@ -149,7 +171,8 @@ public class GameWindow extends JFrame {
         JPanel gridPanel = new JPanel();
         gridPanel.setLayout(new GridLayout(10, 10));
 
-        // EGYETLEN közös figyelőt hozunk létre az egész táblához!
+        // Egyetlen, közös figyelőt hozunk létre az egész táblához a hatékony memóriakezelés, 
+        // és a több cellát érintő lövések (Szőnyegbomba) biztonságos gomb-lezárása érdekében.
         ShootListener sharedListener = new ShootListener(); 
 
         for (int r = 0; r < 10; r++) {
@@ -158,6 +181,7 @@ public class GameWindow extends JFrame {
                 btn.setBackground(Color.LIGHT_GRAY); 
                 btn.setFocusPainted(false); 
                 
+                // Csak akkor adunk hozzá eseménykezelőt, ha a tábla interaktív (ellenség)
                 if (isClickable) {
                     btn.addActionListener(sharedListener);
                 }
@@ -172,10 +196,17 @@ public class GameWindow extends JFrame {
     }
 
     /**
-     * Belső eseménykezelő osztály az ellenséges táblára leadott kattintások (lövések) feldolgozására.
+     * Belső eseménykezelő osztály az ellenséges táblára leadott játékosi kattintások (lövések) feldolgozására.
+     * Lekéri a megkattintott gomb koordinátáját, továbbítja a lövést a Modell (Game) felé,
+     * majd a visszakapott eredmény (ShotResult) alapján kiszínezi és lezárja a megfelelő gombokat.
      */
     private class ShootListener implements ActionListener {
         
+        /**
+         * Akkor hívódik meg, amikor a játékos rákattint egy érvényes, még meg nem lőtt gombra az ellenség tábláján.
+         * 
+         * @param e Az esemény objektum, amely tartalmazza a megnyomott gomb referenciáját.
+         */
         @Override
         public void actionPerformed(ActionEvent e) {
             CellButton clickedBtn = (CellButton) e.getSource();
@@ -183,38 +214,39 @@ public class GameWindow extends JFrame {
 
             if (game.isPlayerTurn() && !game.isGameOver()) {
                 try {
-                    // Lövünk a Modellben, és megkapjuk a CSOMAGOT (ShotResult)
+                    // Lövünk a belső Modellben, és visszakapjuk a feldolgozott eredménycsomagot (DTO)
                     Game.ShotResult result = game.playTurn(target);
                     
-                    // Színezzük a PIROS (találat) gombokat a listából
+                    // Színezzük a találatot (Piros) elszenvedő gombokat, és letiltjuk a további kattintást róluk
                     for (Coordinate hitC : result.hitCells) {
                         CellButton b = enemyButtons[hitC.getRow()][hitC.getCol()];
                         b.setBackground(Color.RED);
-                        b.removeActionListener(this); // Lezárjuk a gombot
+                        b.removeActionListener(this); 
                     }
                     
-                    // Színezzük a KÉK (víz) gombokat a listából
+                    // Színezzük a mellélövést (Kék) regisztráló gombokat, és letiltjuk róluk a kattintást
                     for (Coordinate missC : result.missedCells) {
                         CellButton b = enemyButtons[missC.getRow()][missC.getCol()];
                         b.setBackground(Color.BLUE);
-                        b.removeActionListener(this); // Lezárjuk a gombot
+                        b.removeActionListener(this); 
                     }
 
                     // --- FEGYVERGOMBOK FRISSÍTÉSE ---
+                    // Visszaállítjuk az alapértelmezett színt, és frissítjük a gombokon a maradék lőszerek számát
                     btnSzoenyeg.setText("Szőnyegbomba (" + game.getPlayerSpec1() + ")");
                     btnCelzott.setText("Célzott lövés (" + game.getPlayerSpec2() + ")");
                     btnSzoenyeg.setBackground(null);
                     btnCelzott.setBackground(null);
 
-                    // Ellenőrizzük, vége van-e a játéknak
+                    // Ellenőrizzük, hogy a játékos a mostani lövésével megnyerte-e a mérkőzést
                     if (game.isGameOver()) {
                         JOptionPane.showMessageDialog(GameWindow.this, "Győztél!");
                         dispose(); 
                         new MainMenu().setVisible(true); 
-                        return;
+                        return; // Kilépünk a metódusból, hogy a gép már ne lőjön vissza
                     }
 
-                    // Átadjuk a kört a Botnak
+                    // Ha nincs vége a játéknak, átadjuk a kört a számítógépes ellenfélnek
                     playBotTurn();
 
                 } catch (Exception ex) {
@@ -225,29 +257,31 @@ public class GameWindow extends JFrame {
     }
     
     /**
-     * Elindítja a gép válaszlépését, és frissíti a játékos grafikus tábláját.
+     * Elindítja a gép válaszlépését a belső Modellben, majd az eredmények alapján
+     * frissíti (kiszínezi pirosra vagy kékre) a játékos saját grafikus tábláját.
+     * A kör végén ellenőrzi a gép esetleges győzelmét.
      */
     private void playBotTurn() {
-        // 1. A gép lő, és megkapjuk a CSOMAGOT (ShotResult)
+        // 1. A gép lő a Modellben, és visszakapjuk a feldolgozott eredménycsomagot
         Game.ShotResult result = game.playBotTurn();
 
-        // 2. Kiszínezzük a gép találatait pirosra
+        // 2. Kiszínezzük a gép sikeres találatait (Piros) a játékos tábláján
         for (Coordinate hitC : result.hitCells) {
             CellButton btn = playerButtons[hitC.getRow()][hitC.getCol()];
             btn.setBackground(Color.RED);
         }
 
-        // 3. Kiszínezzük a gép mellélövéseit kékre
+        // 3. Kiszínezzük a gép mellélövéseit (Kék) a játékos tábláján
         for (Coordinate missC : result.missedCells) {
             CellButton btn = playerButtons[missC.getRow()][missC.getCol()];
             btn.setBackground(Color.BLUE);
         }
 
-        // 4. Ellenőrizzük a gép győzelmét
+        // 4. Ellenőrizzük, hogy a gép elsüllyesztette-e a játékos összes hajóját
         if (game.isGameOver()) {
             JOptionPane.showMessageDialog(this, "Vesztettél! A gép elsüllyesztette az összes hajódat!");
             dispose(); 
-            new MainMenu().setVisible(true);
+            new MainMenu().setVisible(true); // Visszatérés a Főmenübe
         }
     }
 }
